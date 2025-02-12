@@ -1,0 +1,49 @@
+# Byte-compiled / cached
+__pycache__/
+*.py[cod]
+*.swp
+*.swo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editor / IDE files
+.vscode/
+.idea/
+*.iml
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# PyInstaller files
+*.spec
+
+# Logs and environment files
+logs/
+*.log
+.env
+.envrc
+*.env.local
+secrets.json
+
+# MacOS and system files
+.DS_Store
+Thumbs.db
+
+# Pytest and coverage reports
+.coverage
+htmlcov/
+pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Temporary files
+*.bak
+*.tmp
