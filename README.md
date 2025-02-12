@@ -9,8 +9,14 @@ A lightweight Python utility package for **web scraping and automation** using S
 - **Human-Like Interactions**: Simulate realistic browsing behavior.
 
 ## 📦 Installation
-```
+Install the package using pip:
+```bash
 pip install selenium-web-automation-utils
+```
+
+To include optional colored logging support, install with the `[color]` extra:
+```bash
+pip install selenium-web-automation-utils[color]
 ```
 
 ## 📖 Usage Example
@@ -26,7 +32,9 @@ with get_webdriver() as driver:
 ## 🛠 Requirements
 - Python 3.7+
 - `selenium`
-- `webdriver-manager`
+
+Optional:
+- `colorfulPyPrint` (for colored logging)
 
 ## 📝 Contributing
 1. Fork the repo
@@ -36,5 +44,4 @@ with get_webdriver() as driver:
 
 ## 📜 License
 MIT License
-
 
