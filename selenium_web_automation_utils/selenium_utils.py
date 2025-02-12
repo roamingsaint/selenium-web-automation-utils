@@ -68,14 +68,19 @@ def get_webdriver(implicitly_wait_seconds=5, user_agent=None, user_profile_path=
     if user_agent:
         options.add_argument(f"user-agent={user_agent}")
 
-    if use_guest_profile:
-        # Launch Chrome in Guest mode
-        options.add_argument("--guest")
-    elif user_profile_path:
-        # Use a specific user profile
-        user_profile = Path(user_profile_path)
-        options.add_argument(f"user-data-dir={user_profile.parent}")
-        options.add_argument(f"profile-directory={user_profile.name}")
+    # Force headless mode in CI/CD environments
+    if os.getenv("CI"):
+        options.add_argument("--headless=new")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+    else:
+        if use_guest_profile:
+            options.add_argument("--guest")
+        elif user_profile_path:
+            user_profile = Path(user_profile_path)
+            options.add_argument(f"user-data-dir={user_profile.parent}")
+            options.add_argument(f"profile-directory={user_profile.name}")
 
     if disable_webdriver_detection:
         options.add_argument("--disable-blink-features=AutomationControlled")
