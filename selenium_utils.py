@@ -4,18 +4,15 @@ from contextlib import contextmanager, redirect_stderr
 from pathlib import Path
 from time import sleep
 
-try:
-    from colorfulPyPrint.py_color import print_error, print_done
-except ImportError:
-    def print_error(msg): print(f"[ERROR] {msg}")
-    def print_done(msg): print(f"[DONE] {msg}")
-
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+
+from logging_utils import print_error, print_done
+
 
 @contextmanager
 def stderr_to_null():
