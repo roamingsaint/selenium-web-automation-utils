@@ -11,7 +11,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from logging_utils import print_error, print_done
+from selenium_web_automation_utils.logging_utils import print_error, print_done
 
 
 @contextmanager
