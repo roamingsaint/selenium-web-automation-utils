@@ -14,4 +14,4 @@ with get_webdriver() as driver:
     heading = find_element_wait(driver, By.TAG_NAME, "h1")
 
     print(f"Page Heading: {heading.text}")
-    time.sleep(2)
+    time.sleep(3)
