@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="selenium-web-automation-utils",
-    version="0.1.0",
+    version="0.1.1",
     description="A lightweight Selenium automation utility package.",
     author="Kanad Rishiraj (@RoamingSaint)",
     author_email="roamingsaint27@gmail.com",
