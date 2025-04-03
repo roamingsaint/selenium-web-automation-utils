@@ -11,7 +11,12 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from selenium_web_automation_utils.logging_utils import print_error, print_done
+from selenium_web_automation_utils.logging_utils import print_error
+
+try:
+    import undetected_chromedriver as uc
+except ImportError:
+    uc = None
 
 
 @contextmanager
@@ -27,9 +32,11 @@ def stderr_to_null():
 @contextmanager
 def get_webdriver(implicitly_wait_seconds=5, user_agent=None, user_profile_path=None,
                   disable_webdriver_detection=True, suppress_stderr=True, download_dir=None,
-                  chrome_extensions: list = None, use_guest_profile=False):
+                  chrome_extensions: list = None, use_guest_profile=False,
+                  mobile_emulation=False, use_undetected=False):
     """
     Context manager that provides a Selenium webdriver instance.
+    Supports stealth browsing via undetected-chromedriver.
 
     This function creates a new Chrome webdriver instance and yields it to the caller.
     When the caller is done with the webdriver, it will automatically quit the driver.
@@ -42,9 +49,15 @@ def get_webdriver(implicitly_wait_seconds=5, user_agent=None, user_profile_path=
     :param download_dir: Custom download directory for Chrome
     :param chrome_extensions: List of chrome extensions to be added
     :param use_guest_profile: Launch Chrome in Guest mode
+    :param mobile_emulation: Switches to a mobile screensize
+    :param use_undetected: uses undetected-chromedriver
     :return: webdriver.Chrome: A new Chrome webdriver instance.
     """
-    options = webdriver.ChromeOptions()
+    if use_undetected and uc is None:
+        raise ImportError("undetected-chromedriver is not installed. Run: pip install undetected-chromedriver")
+
+    # Choose appropriate options object
+    options = uc.ChromeOptions() if use_undetected else webdriver.ChromeOptions()
     options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])  # Disable logging
     options.add_argument("log-level=3")  # Set log level to ERROR to reduce verbosity
     options.add_argument("--silent")  # Suppresses log messages from ChromeDriver
@@ -82,17 +95,29 @@ def get_webdriver(implicitly_wait_seconds=5, user_agent=None, user_profile_path=
             options.add_argument(f"user-data-dir={user_profile.parent}")
             options.add_argument(f"profile-directory={user_profile.name}")
 
-    if disable_webdriver_detection:
+    if disable_webdriver_detection and not use_undetected:
         options.add_argument("--disable-blink-features=AutomationControlled")
 
-    # Suppress stderr if requested
-    if suppress_stderr:
-        with stderr_to_null():
-            driver = webdriver.Chrome(options=options)
-    else:
-        driver = webdriver.Chrome(options=options)
+    if mobile_emulation:
+        options.add_experimental_option("mobileEmulation", {
+            "deviceMetrics": {"width": 360, "height": 740, "pixelRatio": 4},
+            "userAgent": (
+                "Mozilla/5.0 (Linux; Android 7.0; SM-G950U Build/NRD90M; wv) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/90.0.4430.91 Mobile Safari/537.36"
+            )
+        })
 
-    if disable_webdriver_detection:
+    # Create driver
+    if use_undetected:
+        driver = uc.Chrome(options=options, headless=False)
+    else:
+        if suppress_stderr:
+            with stderr_to_null():
+                driver = webdriver.Chrome(options=options)
+        else:
+            driver = webdriver.Chrome(options=options)
+
+    if disable_webdriver_detection and not use_undetected:
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
     driver.implicitly_wait(implicitly_wait_seconds)
