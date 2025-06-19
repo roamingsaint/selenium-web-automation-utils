@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.1] - 2024-06-19
+### Added
+- clean_error_str(): Returns error message without the Selenium Stacktrace
+
 ## [0.2.0] - 2024-04-03
 ### Added
 - use_undetected=True uses undetected-chromedriver

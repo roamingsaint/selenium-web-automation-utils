@@ -277,3 +277,7 @@ def move_mouse_randomly(driver):
     except Exception as e:
         print_error(repr(e))
     human_delay()  # Pause after moving the mouse
+
+
+def clean_error_str(e: Exception):
+    return str(e).split('Stacktrace')[0].strip()
