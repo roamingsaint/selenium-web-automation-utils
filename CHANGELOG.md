@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.2] - 2024-06-29
+### Added
+- headless=True to run headless
+
 ## [0.2.1] - 2024-06-19
 ### Added
 - clean_error_str(): Returns error message without the Selenium Stacktrace

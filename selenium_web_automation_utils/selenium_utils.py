@@ -30,10 +30,17 @@ def stderr_to_null():
 
 
 @contextmanager
-def get_webdriver(implicitly_wait_seconds=5, user_agent=None, user_profile_path=None,
-                  disable_webdriver_detection=True, suppress_stderr=True, download_dir=None,
-                  chrome_extensions: list = None, use_guest_profile=False,
-                  mobile_emulation=False, use_undetected=False):
+def get_webdriver(implicitly_wait_seconds=5,
+                  user_agent=None,
+                  user_profile_path=None,
+                  disable_webdriver_detection: bool = True,
+                  suppress_stderr: bool = True,
+                  download_dir=None,
+                  chrome_extensions: list = None,
+                  use_guest_profile: bool = False,
+                  mobile_emulation: bool = False,
+                  use_undetected: bool = False,
+                  headless: bool = False):  # ← added
     """
     Context manager that provides a Selenium webdriver instance.
     Supports stealth browsing via undetected-chromedriver.
@@ -51,6 +58,7 @@ def get_webdriver(implicitly_wait_seconds=5, user_agent=None, user_profile_path=
     :param use_guest_profile: Launch Chrome in Guest mode
     :param mobile_emulation: Switches to a mobile screensize
     :param use_undetected: uses undetected-chromedriver
+    :param headless: run Chrome in headless mode (in addition to CI forcing headless)
     :return: webdriver.Chrome: A new Chrome webdriver instance.
     """
     if use_undetected and uc is None:
@@ -81,8 +89,8 @@ def get_webdriver(implicitly_wait_seconds=5, user_agent=None, user_profile_path=
     if user_agent:
         options.add_argument(f"user-agent={user_agent}")
 
-    # Force headless mode in CI/CD environments
-    if os.getenv("CI"):
+    # Force headless mode in CI/CD environments or if explicitly requested
+    if os.getenv("CI") or headless:
         options.add_argument("--headless=new")
         options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
@@ -109,7 +117,7 @@ def get_webdriver(implicitly_wait_seconds=5, user_agent=None, user_profile_path=
 
     # Create driver
     if use_undetected:
-        driver = uc.Chrome(options=options, headless=False)
+        driver = uc.Chrome(options=options)
     else:
         if suppress_stderr:
             with stderr_to_null():
