@@ -3,6 +3,7 @@ import random
 from contextlib import contextmanager, redirect_stderr
 from pathlib import Path
 from time import sleep
+from typing import Optional, List
 
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -18,78 +19,121 @@ try:
 except ImportError:
     uc = None
 
+# A small pool of common desktop UAs—feel free to expand this list
+USER_AGENT_LIST = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.170 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+]
+
 
 @contextmanager
 def stderr_to_null():
-    """
-    Context manager to suppress stderr output temporarily.
-    """
+    """Context manager to suppress stderr output temporarily."""
     with open(os.devnull, 'w') as devnull_file:
         with redirect_stderr(devnull_file):
             yield
 
 
 @contextmanager
-def get_webdriver(implicitly_wait_seconds=5,
-                  user_agent=None,
-                  user_profile_path=None,
-                  disable_webdriver_detection: bool = True,
-                  suppress_stderr: bool = True,
-                  download_dir=None,
-                  chrome_extensions: list = None,
-                  use_guest_profile: bool = False,
-                  mobile_emulation: bool = False,
-                  use_undetected: bool = False,
-                  headless: bool = False):  # ← added
+def get_webdriver(
+    implicitly_wait_seconds: int = 5,
+    user_agent: Optional[str] = None,
+    proxy: Optional[str] = None,
+    user_profile_path: Optional[str] = None,
+    disable_webdriver_detection: bool = True,
+    suppress_stderr: bool = True,
+    download_dir: Optional[str] = None,
+    chrome_extensions: Optional[List[str]] = None,
+    use_guest_profile: bool = False,
+    mobile_emulation: bool = False,
+    use_undetected: bool = False,
+    headless: bool = False
+):
     """
-    Context manager that provides a Selenium webdriver instance.
-    Supports stealth browsing via undetected-chromedriver.
+    Create and yield a Chrome WebDriver with optional stealth and convenience settings,
+    then ensure it is cleanly quit on exit.
 
-    This function creates a new Chrome webdriver instance and yields it to the caller.
-    When the caller is done with the webdriver, it will automatically quit the driver.
+    This context manager supports both standard Selenium Chrome and
+    undetected-chromedriver for bypassing basic bot-detection. It also
+    lets you customize user-agent, proxy, download folder, extensions,
+    headless mode, mobile emulation, and profile reuse.
 
-    :param implicitly_wait_seconds: The amount of time (in seconds) to wait when trying to locate elements on the page
-    :param user_agent: Custom user agent (Google for 'What is my user agent')
-    :param user_profile_path: Profile Path from chrome://version/
-    :param disable_webdriver_detection: Disable Webdriver detection
-    :param suppress_stderr: Suppress stderr to devnull
-    :param download_dir: Custom download directory for Chrome
-    :param chrome_extensions: List of chrome extensions to be added
-    :param use_guest_profile: Launch Chrome in Guest mode
-    :param mobile_emulation: Switches to a mobile screensize
-    :param use_undetected: uses undetected-chromedriver
-    :param headless: run Chrome in headless mode (in addition to CI forcing headless)
-    :return: webdriver.Chrome: A new Chrome webdriver instance.
+    Parameters
+    ----------
+    implicitly_wait_seconds : int, default=5
+        How many seconds to implicitly wait when locating elements.
+    user_agent : str or None, default=None
+        Custom User-Agent string to present. If None, a random UA is chosen. (Google for 'What is my user agent')
+    proxy : str or None, default=None
+        Proxy server URL (e.g. "http://user:pass@host:port") to route all requests.
+    user_profile_path : str or None, default=None
+        Path to an existing Chrome user profile for session persistence. (see: chrome://version/)
+    disable_webdriver_detection : bool, default=True
+        Whether to hide the WebDriver `navigator.webdriver` flag.
+    suppress_stderr : bool, default=True
+        Redirect ChromeDriver’s stderr output to /dev/null.
+    download_dir : str or None, default=None
+        Filesystem path for automatic downloads (sets Chrome prefs).
+    chrome_extensions : list of str or None, default=None
+        File paths to any `.crx` extensions to load on startup.
+    use_guest_profile : bool, default=False
+        Launch Chrome in Guest mode instead of loading a user profile.
+    mobile_emulation : bool, default=False
+        Emulate a mobile viewport and user-agent for mobile testing.
+    use_undetected : bool, default=False
+        Use `undetected-chromedriver` rather than vanilla Selenium.
+    headless : bool, default=False
+        Run in headless mode (no visible browser window). Also forced in CI.
+
+    Yields
+    ------
+    selenium.webdriver.Chrome
+        A configured Chrome WebDriver instance ready for navigation.
+
+    Examples
+    --------
+    >> with get_webdriver(user_agent='CustomUA/1.0', headless=True) as driver:
+    ...     driver.get('https://example.com')
+    >> # Outside the block, driver.quit() has been called automatically.
     """
     if use_undetected and uc is None:
         raise ImportError("undetected-chromedriver is not installed. Run: pip install undetected-chromedriver")
 
+    # pick a random UA if none provided
+    ua = user_agent or random.choice(USER_AGENT_LIST)
+
     # Choose appropriate options object
-    options = uc.ChromeOptions() if use_undetected else webdriver.ChromeOptions()
-    options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])  # Disable logging
+    Options = uc.ChromeOptions if (use_undetected and uc) else webdriver.ChromeOptions
+    options = Options()
+    options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+    options.add_argument(f"--user-agent={ua}")
     options.add_argument("log-level=3")  # Set log level to ERROR to reduce verbosity
     options.add_argument("--silent")  # Suppresses log messages from ChromeDriver
 
-    # Set custom download directory if provided
+    # set proxy if given
+    if proxy:
+        options.add_argument(f"--proxy-server={proxy}")
+
+    # set download directory
     if download_dir:
-        download_dir_path = str(Path(download_dir).resolve())
         prefs = {
-            "download.default_directory": download_dir_path,
+            "download.default_directory": str(Path(download_dir).resolve()),
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
             "safebrowsing.enabled": True
         }
         options.add_experimental_option("prefs", prefs)
 
-    # Add chrome extensions
+    # add extensions
     if chrome_extensions:
-        for extension in chrome_extensions:
-            options.add_extension(extension)
+        for ext in chrome_extensions:
+            options.add_extension(ext)
 
-    if user_agent:
-        options.add_argument(f"user-agent={user_agent}")
-
-    # Force headless mode in CI/CD environments or if explicitly requested
+    # headless / CI flags
     if os.getenv("CI") or headless:
         options.add_argument("--headless=new")
         options.add_argument("--disable-gpu")
@@ -99,24 +143,25 @@ def get_webdriver(implicitly_wait_seconds=5,
         if use_guest_profile:
             options.add_argument("--guest")
         elif user_profile_path:
-            user_profile = Path(user_profile_path)
-            options.add_argument(f"user-data-dir={user_profile.parent}")
-            options.add_argument(f"profile-directory={user_profile.name}")
-
-    if disable_webdriver_detection and not use_undetected:
-        options.add_argument("--disable-blink-features=AutomationControlled")
+            p = Path(user_profile_path)
+            options.add_argument(f"--user-data-dir={p.parent}")
+            options.add_argument(f"--profile-directory={p.name}")
 
     if mobile_emulation:
         options.add_experimental_option("mobileEmulation", {
             "deviceMetrics": {"width": 360, "height": 740, "pixelRatio": 4},
             "userAgent": (
                 "Mozilla/5.0 (Linux; Android 7.0; SM-G950U Build/NRD90M; wv) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/90.0.4430.91 Mobile Safari/537.36"
+                "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 "
+                "Chrome/90.0.4430.91 Mobile Safari/537.36"
             )
         })
 
-    # Create driver
-    if use_undetected:
+    if disable_webdriver_detection and not use_undetected:
+        options.add_argument("--disable-blink-features=AutomationControlled")
+
+    # instantiate
+    if use_undetected and uc:
         driver = uc.Chrome(options=options)
     else:
         if suppress_stderr:
@@ -125,6 +170,7 @@ def get_webdriver(implicitly_wait_seconds=5,
         else:
             driver = webdriver.Chrome(options=options)
 
+    # further stealth
     if disable_webdriver_detection and not use_undetected:
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 

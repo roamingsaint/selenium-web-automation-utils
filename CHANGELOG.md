@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.3] - 2024-08-06
+### Added
+- USER_AGENT_LIST (randomly select a User Agent if not passed explicitly)
+
 ## [0.2.2] - 2024-06-29
 ### Added
 - headless=True to run headless
