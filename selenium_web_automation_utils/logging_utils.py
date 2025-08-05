@@ -15,7 +15,7 @@ console_handler.setLevel(logging.INFO)
 
 # choose your format & colors
 formatter = ColoredFormatter(
-    "%(log_color)s%(levelname)-8s%(reset)s %(message)s",
+    "%(log_color)s%(levelname)-8s (webdriver)%(reset)s %(message)s",
     log_colors={
         "DEBUG":    "cyan",
         "INFO":     "green",
@@ -30,3 +30,6 @@ formatter = ColoredFormatter(
 
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+
+# prevent messages from also going to the root logger
+logger.propagate = False
