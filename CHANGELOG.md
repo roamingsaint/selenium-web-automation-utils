@@ -1,10 +1,11 @@
 # Changelog
 
-## [0.3.0] - 2024-08-06
+## [0.3.1] - 2024-08-06
 ### Added
 - mimic_human()
 - undetected-chromedriver as a dependency
 - Support for python 3.12 (distutils)
+- Better logging (capture events)
 
 ## [0.2.3] - 2024-08-06
 ### Added
