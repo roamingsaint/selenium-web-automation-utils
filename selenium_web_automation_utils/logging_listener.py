@@ -49,12 +49,23 @@ class LoggingListener(AbstractEventListener):
         logger.info("← after_alert_accept")
 
     def on_exception(self, exception, driver: WebDriver):
-        # take a timestamped screenshot
-        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-        filename = f"screenshot-{ts}.png"
-        try:
-            driver.save_screenshot(filename)
-            logger.info("✔ saved screenshot %s", filename)
-        except Exception as e:
-            logger.error("✖ failed to save screenshot: %s", e)
         logger.error("‼ WebDriver exception: %s", exception)
+        # # Walk the traceback to see if move_mouse_randomly is in the call stack
+        # tb = exception.__traceback__
+        # while tb:
+        #     if tb.tb_frame.f_code.co_name in ["move_mouse_randomly"]:
+        #         # Skip screenshot for mouse-move hiccups
+        #         logger.warning("⚠ Skipping screenshot for move_mouse_randomly exception: %s", exception)
+        #         return
+        #     tb = tb.tb_next
+        #
+        # # Otherwise take a timestamped screenshot
+        # ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        # filename = f"screenshot-{ts}.png"
+        # try:
+        #     driver.save_screenshot(filename)
+        #     logger.info("✔ saved screenshot %s", filename)
+        # except Exception as e:
+        #     logger.error("✖ failed to save screenshot: %s", e)
+        #
+        # logger.error("‼ WebDriver exception: %s", exception)
