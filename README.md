@@ -14,11 +14,6 @@ Install the package using pip:
 pip install selenium-web-automation-utils
 ```
 
-To include optional colored logging support, install with the `[color]` extra:
-```bash
-pip install selenium-web-automation-utils[color]
-```
-
 ## 📖 Usage Example
 ```python
 from selenium_web_automation_utils.selenium_utils import get_webdriver, find_element_wait
@@ -32,9 +27,9 @@ with get_webdriver() as driver:
 ## 🛠 Requirements
 - Python 3.7+
 - `selenium`
+- `undetected-chormedriver`
+- `colorlog`
 
-Optional:
-- `colorfulPyPrint` (for colored logging)
 
 ## 📝 Contributing
 1. Fork the repo

@@ -1,50 +1,32 @@
 import logging
+from colorlog import ColoredFormatter
 
-# Configure logging
+# ——————————————————————————————————————————————
+# 1) Create logger
+# ——————————————————————————————————————————————
 logger = logging.getLogger("selenium_web_automation")
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    level=logging.INFO  # Default level (users can override)
+logger.setLevel(logging.INFO)  # default level
+
+# ——————————————————————————————————————————————
+# 2) Create console handler with color
+# ——————————————————————————————————————————————
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# choose your format & colors
+formatter = ColoredFormatter(
+    "%(log_color)s%(levelname)-8s%(reset)s %(message)s",
+    log_colors={
+        "DEBUG":    "cyan",
+        "INFO":     "green",
+        "WARNING":  "yellow",
+        "ERROR":    "red",
+        "CRITICAL": "bold_red",
+    },
+    reset=True,
+    secondary_log_colors={},
+    style="%",
 )
 
-# Try importing colorfulPyPrint for optional color support
-try:
-    from colorfulPyPrint.py_color import (
-        print_error as color_error,
-        print_done as color_done,
-        print_custom as color_custom,
-        print_warning as color_warning
-    )
-
-
-    def print_error(msg):
-        color_error(msg)
-        logger.error(msg)
-
-
-    def print_warning(msg):
-        color_warning(msg)
-        logger.warning(msg)
-
-
-    def print_done(msg):
-        color_done(msg)
-        logger.info(msg)
-
-    def print_custom(msg):
-        color_custom(msg)
-        logger.info(msg)
-
-except ImportError:
-    def print_error(msg):
-        logger.error(msg)
-
-
-    def print_done(msg):
-        logger.info(msg)
-
-    def print_custom(msg):
-        logger.info(msg)
-
-    def print_warning(msg):
-        logger.warning(msg)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)

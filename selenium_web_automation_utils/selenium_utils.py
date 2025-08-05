@@ -14,9 +14,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from selenium_web_automation_utils.logging_utils import (
-    print_error, print_warning, print_custom
-)
+from selenium_web_automation_utils.logging_utils import logger
 
 # compatibility shim (must come before uc import)
 from .compatibility import *
@@ -43,19 +41,19 @@ def stderr_to_null():
 
 @contextmanager
 def get_webdriver(
-    *,
-    implicitly_wait_seconds: int = 5,
-    user_agent: Optional[str] = None,
-    proxy: Optional[str] = None,
-    user_profile_path: Optional[str] = None,
-    disable_webdriver_detection: bool = True,
-    suppress_stderr: bool = True,
-    download_dir: Optional[str] = None,
-    chrome_extensions: Optional[List[str]] = None,
-    use_guest_profile: bool = False,
-    mobile_emulation: bool = False,
-    use_undetected: bool = False,
-    headless: bool = False,
+        *,
+        implicitly_wait_seconds: int = 5,
+        user_agent: Optional[str] = None,
+        proxy: Optional[str] = None,
+        user_profile_path: Optional[str] = None,
+        disable_webdriver_detection: bool = True,
+        suppress_stderr: bool = True,
+        download_dir: Optional[str] = None,
+        chrome_extensions: Optional[List[str]] = None,
+        use_guest_profile: bool = False,
+        mobile_emulation: bool = False,
+        use_undetected: bool = False,
+        headless: bool = False,
 ) -> Iterator[WebDriver]:
     """
     Yields a configured Chrome WebDriver (selenium or undetected-chromedriver),
@@ -282,7 +280,7 @@ def find_element_until_none(driver, xpath, timeout=10):
         try:
             yield find_element_wait(driver, By.XPATH, xpath, timeout=timeout, raise_exception=True)
         except Exception as e:
-            print(f"No longer able to find element with xpath: {xpath}. {repr(e)}")
+            logger.warning("No longer able to find element with xpath %r: %s", xpath, e)
             return
 
 
@@ -345,17 +343,17 @@ def move_mouse_randomly(driver):
     try:
         ActionChains(driver).move_by_offset(new_x - current_x, new_y - current_y).perform()
     except Exception as e:
-        print_error(repr(e))
+        logger.error("move_mouse_randomly failed: %s", e)
     human_delay()  # Pause after moving the mouse
 
 
 def mimic_human(
-    driver: WebDriver,
-    min_sleep: float = 2.0,
-    max_sleep: float = 5.0,
-    random_scroll: bool = False,
-    random_mouse_move: bool = False,
-    quiet: bool = False,
+        driver: WebDriver,
+        min_sleep: float = 2.0,
+        max_sleep: float = 5.0,
+        random_scroll: bool = False,
+        random_mouse_move: bool = False,
+        quiet: bool = False,
 ) -> None:
     """
     Pause and optionally scroll/move mouse to mimic a human user.
@@ -382,7 +380,7 @@ def mimic_human(
             actions.append("scroll")
         if random_mouse_move:
             actions.append("mouse move")
-        print_custom(f"<- Mimic human ->: {', '.join(actions)}")
+        logger.info("Mimic human: %s", ", ".join(actions))
 
     sleep(sleep_secs)
 
@@ -390,13 +388,13 @@ def mimic_human(
         try:
             scroll_randomly(driver, min_scrolls=1, max_scrolls=3)
         except Exception as e:
-            print_warning(f"mimic_human scroll failed: {e}")
+            logger.warning("mimic_human scroll failed: %s", e)
 
     if random_mouse_move:
         try:
             move_mouse_randomly(driver)
         except Exception as e:
-            print_warning(f"mimic_human mouse move failed: {e}")
+            logger.warning("mimic_human mouse move failed: %s", e)
 
 
 def clean_error_str(e: Exception):

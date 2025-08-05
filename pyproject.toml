@@ -15,11 +15,9 @@ requires-python = ">=3.7"
 dependencies = [
     "selenium",
     "setuptools",
-    "undetected-chromedriver"
+    "undetected-chromedriver",
+    "colorlog"
 ]
-
-[project.optional-dependencies]
-color = ["colorfulPyPrint"]
 
 [project.urls]
 "Homepage" = "https://github.com/roamingsaint/selenium-web-automation-utils"

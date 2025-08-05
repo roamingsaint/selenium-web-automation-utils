@@ -1,3 +1,4 @@
-selenium
+colorlog
 pytest
+selenium
 undetected-chromedriver
