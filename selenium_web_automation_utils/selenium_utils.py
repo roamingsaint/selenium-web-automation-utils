@@ -1,5 +1,7 @@
 import os
+import platform
 import random
+import sys
 from contextlib import contextmanager, redirect_stderr
 from pathlib import Path
 from time import sleep
@@ -14,10 +16,12 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from selenium_web_automation_utils.logging_utils import print_error
 
-try:
-    import undetected_chromedriver as uc
-except ImportError:
-    uc = None
+_py_ver = tuple(map(int, platform.python_version_tuple()))
+if _py_ver >= (3, 12):
+    # setuptools bundles a vendored distutils in _distutils
+    from setuptools._distutils import version as _dv
+    sys.modules["distutils.version"] = _dv
+import undetected_chromedriver as uc
 
 # A small pool of common desktop UAs—feel free to expand this list
 USER_AGENT_LIST = [
@@ -40,18 +44,18 @@ def stderr_to_null():
 
 @contextmanager
 def get_webdriver(
-    implicitly_wait_seconds: int = 5,
-    user_agent: Optional[str] = None,
-    proxy: Optional[str] = None,
-    user_profile_path: Optional[str] = None,
-    disable_webdriver_detection: bool = True,
-    suppress_stderr: bool = True,
-    download_dir: Optional[str] = None,
-    chrome_extensions: Optional[List[str]] = None,
-    use_guest_profile: bool = False,
-    mobile_emulation: bool = False,
-    use_undetected: bool = False,
-    headless: bool = False
+        implicitly_wait_seconds: int = 5,
+        user_agent: Optional[str] = None,
+        proxy: Optional[str] = None,
+        user_profile_path: Optional[str] = None,
+        disable_webdriver_detection: bool = True,
+        suppress_stderr: bool = True,
+        download_dir: Optional[str] = None,
+        chrome_extensions: Optional[List[str]] = None,
+        use_guest_profile: bool = False,
+        mobile_emulation: bool = False,
+        use_undetected: bool = False,
+        headless: bool = False
 ):
     """
     Create and yield a Chrome WebDriver with optional stealth and convenience settings,
@@ -109,7 +113,11 @@ def get_webdriver(
     # Choose appropriate options object
     Options = uc.ChromeOptions if (use_undetected and uc) else webdriver.ChromeOptions
     options = Options()
-    options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+
+    # only set excludeSwitches for the normal Selenium path, not undetected-chromedriver
+    if not use_undetected:
+        options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+
     options.add_argument(f"--user-agent={ua}")
     options.add_argument("log-level=3")  # Set log level to ERROR to reduce verbosity
     options.add_argument("--silent")  # Suppresses log messages from ChromeDriver
@@ -162,6 +170,8 @@ def get_webdriver(
 
     # instantiate
     if use_undetected and uc:
+        # disable undetected-chromedriver __del__ so it doesn't try to quit twice
+        uc.Chrome.__del__ = lambda self: None
         driver = uc.Chrome(options=options)
     else:
         if suppress_stderr:

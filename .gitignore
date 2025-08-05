@@ -47,3 +47,7 @@ coverage.xml
 # Temporary files
 *.bak
 *.tmp
+
+# Temp folders
+_temp
+_ROUGH
