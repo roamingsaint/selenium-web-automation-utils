@@ -7,11 +7,13 @@ from time import sleep
 from typing import Optional, List, Iterator
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.event_firing_webdriver import EventFiringWebDriver
 from selenium.webdriver.support.wait import WebDriverWait
 
 from selenium_web_automation_utils.logging_utils import logger
@@ -19,6 +21,8 @@ from selenium_web_automation_utils.logging_utils import logger
 # compatibility shim (must come before uc import)
 from .compatibility import *
 import undetected_chromedriver as uc
+
+from .logging_listener import LoggingListener
 
 # A small pool of common desktop UAs—feel free to expand this list
 USER_AGENT_LIST = [
@@ -102,6 +106,13 @@ def get_webdriver(
     ...     driver.get('https://example.com')
     >> # Outside the block, driver.quit() has been called automatically.
     """
+    logger.info(
+        "Launching %sChrome WebDriver (undetected=%s, headless=%s)",
+        "undetected-" if use_undetected else "",
+        use_undetected,
+        headless
+    )
+
     if use_undetected and uc is None:
         raise ImportError(
             "undetected-chromedriver is not installed. "
@@ -183,6 +194,9 @@ def get_webdriver(
         else:
             driver = webdriver.Chrome(options=options)
 
+    # Log events in webdriver
+    driver = EventFiringWebDriver(driver, LoggingListener())
+
     if disable_webdriver_detection and not use_undetected:
         driver.execute_script(
             "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
@@ -193,6 +207,7 @@ def get_webdriver(
     try:
         yield driver
     finally:
+        logger.info("Quitting WebDriver")
         driver.quit()
 
 
@@ -215,13 +230,15 @@ def find_element_wait(driver,
     Raises:
         Exception: If the element is not found and raise_exception is True.
     """
+    logger.debug("⌛ waiting up to %ss for element %s=%s", timeout, by, locator)
     try:
         return WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((by, locator))
         )
-    except Exception as e:
+    except TimeoutException:
+        logger.warning("⌛ timeout after %ss waiting for %s=%s", timeout, by, locator)
         if raise_exception:
-            raise e
+            raise
 
 
 def find_element_by_text(driver, tag, text, anywhere_incl_children=True, timeout=10, raise_exception=True):
