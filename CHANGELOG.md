@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.4] - 2024-08-06
+### Added
+- undetected-chromedriver as a dependency
+
 ## [0.2.3] - 2024-08-06
 ### Added
 - USER_AGENT_LIST (randomly select a User Agent if not passed explicitly)
