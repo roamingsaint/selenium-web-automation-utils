@@ -9,7 +9,12 @@ logging.basicConfig(
 
 # Try importing colorfulPyPrint for optional color support
 try:
-    from colorfulPyPrint.py_color import print_error as color_error, print_done as color_done
+    from colorfulPyPrint.py_color import (
+        print_error as color_error,
+        print_done as color_done,
+        print_custom as color_custom,
+        print_warning as color_warning
+    )
 
 
     def print_error(msg):
@@ -17,8 +22,17 @@ try:
         logger.error(msg)
 
 
+    def print_warning(msg):
+        color_warning(msg)
+        logger.warning(msg)
+
+
     def print_done(msg):
         color_done(msg)
+        logger.info(msg)
+
+    def print_custom(msg):
+        color_custom(msg)
         logger.info(msg)
 
 except ImportError:
@@ -29,3 +43,8 @@ except ImportError:
     def print_done(msg):
         logger.info(msg)
 
+    def print_custom(msg):
+        logger.info(msg)
+
+    def print_warning(msg):
+        logger.warning(msg)

@@ -1,3 +1,4 @@
+# selenium_web_automation_utils/selenium_utils.py
 import os
 import random
 from contextlib import contextmanager, redirect_stderr
@@ -8,13 +9,17 @@ from typing import Optional, List, Iterator
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from selenium_web_automation_utils.logging_utils import print_error, print_warning, print_custom
+from selenium_web_automation_utils.logging_utils import (
+    print_error, print_warning, print_custom
+)
 
-from .compatibility import *  # IMPORTANT: Do not remove (supports ver >= 3.12)
+# compatibility shim (must come before uc import)
+from .compatibility import *
 import undetected_chromedriver as uc
 
 # A small pool of common desktop UAs—feel free to expand this list
@@ -30,30 +35,30 @@ USER_AGENT_LIST = [
 
 @contextmanager
 def stderr_to_null():
-    """Context manager to suppress stderr output temporarily."""
-    with open(os.devnull, 'w') as devnull_file:
-        with redirect_stderr(devnull_file):
+    """Temporarily suppress stderr output."""
+    with open(os.devnull, 'w') as devnull:
+        with redirect_stderr(devnull):
             yield
 
 
 @contextmanager
 def get_webdriver(
-        *,
-        implicitly_wait_seconds: int = 5,
-        user_agent: Optional[str] = None,
-        proxy: Optional[str] = None,
-        user_profile_path: Optional[str] = None,
-        disable_webdriver_detection: bool = True,
-        suppress_stderr: bool = True,
-        download_dir: Optional[str] = None,
-        chrome_extensions: Optional[List[str]] = None,
-        use_guest_profile: bool = False,
-        mobile_emulation: bool = False,
-        use_undetected: bool = False,
-        headless: bool = False
-):
+    *,
+    implicitly_wait_seconds: int = 5,
+    user_agent: Optional[str] = None,
+    proxy: Optional[str] = None,
+    user_profile_path: Optional[str] = None,
+    disable_webdriver_detection: bool = True,
+    suppress_stderr: bool = True,
+    download_dir: Optional[str] = None,
+    chrome_extensions: Optional[List[str]] = None,
+    use_guest_profile: bool = False,
+    mobile_emulation: bool = False,
+    use_undetected: bool = False,
+    headless: bool = False,
+) -> Iterator[WebDriver]:
     """
-    Create and yield a Chrome WebDriver with optional stealth and convenience settings,
+    Yields a configured Chrome WebDriver (selenium or undetected-chromedriver),
     then ensure it is cleanly quit on exit.
 
     This context manager supports both standard Selenium Chrome and
@@ -100,18 +105,23 @@ def get_webdriver(
     >> # Outside the block, driver.quit() has been called automatically.
     """
     if use_undetected and uc is None:
-        raise ImportError("undetected-chromedriver is not installed. Run: pip install undetected-chromedriver")
+        raise ImportError(
+            "undetected-chromedriver is not installed. "
+            "Run: pip install undetected-chromedriver"
+        )
 
     # pick a random UA if none provided
     ua = user_agent or random.choice(USER_AGENT_LIST)
 
-    # Choose appropriate options object
-    Options = uc.ChromeOptions if (use_undetected and uc) else webdriver.ChromeOptions
+    # pick the right Options class
+    Options = uc.ChromeOptions if use_undetected else webdriver.ChromeOptions
     options = Options()
 
     # only set excludeSwitches for the normal Selenium path, not undetected-chromedriver
     if not use_undetected:
-        options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+        options.add_experimental_option(
+            "excludeSwitches", ["enable-logging", "enable-automation"]
+        )
 
     options.add_argument(f"--user-agent={ua}")
     options.add_argument("log-level=3")  # Set log level to ERROR to reduce verbosity
@@ -127,7 +137,7 @@ def get_webdriver(
             "download.default_directory": str(Path(download_dir).resolve()),
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
-            "safebrowsing.enabled": True
+            "safebrowsing.enabled": True,
         }
         options.add_experimental_option("prefs", prefs)
 
@@ -154,7 +164,7 @@ def get_webdriver(
         options.add_experimental_option("mobileEmulation", {
             "deviceMetrics": {"width": 360, "height": 740, "pixelRatio": 4},
             "userAgent": (
-                "Mozilla/5.0 (Linux; Android 7.0; SM-G950U Build/NRD90M; wv) "
+                "Mozilla/5.0 (Linux; Android 7.0; SM-G950U; wv) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 "
                 "Chrome/90.0.4430.91 Mobile Safari/537.36"
             )
@@ -164,8 +174,8 @@ def get_webdriver(
         options.add_argument("--disable-blink-features=AutomationControlled")
 
     # instantiate
-    if use_undetected and uc:
-        # disable undetected-chromedriver __del__ so it doesn't try to quit twice
+    if use_undetected:
+        # silence UC’s __del__ on Windows, so it doesn't try to quit twice
         uc.Chrome.__del__ = lambda self: None
         driver = uc.Chrome(options=options)
     else:
@@ -175,9 +185,10 @@ def get_webdriver(
         else:
             driver = webdriver.Chrome(options=options)
 
-    # further stealth
     if disable_webdriver_detection and not use_undetected:
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        driver.execute_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
 
     driver.implicitly_wait(implicitly_wait_seconds)
 
@@ -294,7 +305,7 @@ def type_keys(web_element: WebElement, message: str, min_delay: int = 50, max_de
     - None: This function does not return any value.
 
     Example:
-    >>> type_keys(web_element, "Hello World")
+    >> type_keys(web_element, "Hello World")
     """
     for char in message:
         web_element.send_keys(char)
@@ -339,15 +350,15 @@ def move_mouse_randomly(driver):
 
 
 def mimic_human(
-        driver,
-        min_sleep: float = 2.0,
-        max_sleep: float = 5.0,
-        random_scroll: bool = False,
-        random_mouse_move: bool = False,
-        quiet: bool = False,
+    driver: WebDriver,
+    min_sleep: float = 2.0,
+    max_sleep: float = 5.0,
+    random_scroll: bool = False,
+    random_mouse_move: bool = False,
+    quiet: bool = False,
 ) -> None:
     """
-    Pause and optionally perform simple interactions to mimic a human user.
+    Pause and optionally scroll/move mouse to mimic a human user.
 
     Parameters
     ----------
@@ -364,26 +375,23 @@ def mimic_human(
     quiet
         If True, suppress the printout of what it’s doing.
     """
-    # 1. Sleep
     sleep_secs = random.uniform(min_sleep, max_sleep)
     if not quiet:
-        actions = [f"sleeping for {sleep_secs:.2f}s"]
+        actions = [f"sleep {sleep_secs:.2f}s"]
         if random_scroll:
             actions.append("scroll")
         if random_mouse_move:
             actions.append("mouse move")
-        print_custom(f"<- Mimicking human ->: {', '.join(actions)}")
+        print_custom(f"<- Mimic human ->: {', '.join(actions)}")
 
     sleep(sleep_secs)
 
-    # 2. Random scroll
     if random_scroll:
         try:
             scroll_randomly(driver, min_scrolls=1, max_scrolls=3)
         except Exception as e:
             print_warning(f"mimic_human scroll failed: {e}")
 
-    # 3. Random mouse move
     if random_mouse_move:
         try:
             move_mouse_randomly(driver)
