@@ -42,6 +42,9 @@ def stderr_to_null():
         with redirect_stderr(devnull):
             yield
 
+def clean_error_str(e: Exception):
+    return str(e).split('Stacktrace')[0].strip()
+
 
 def clean_error_str(e: Exception):
     return str(e).split('Stacktrace')[0].strip()
