@@ -1,11 +1,9 @@
 import os
-import platform
 import random
-import sys
 from contextlib import contextmanager, redirect_stderr
 from pathlib import Path
 from time import sleep
-from typing import Optional, List
+from typing import Optional, List, Iterator
 
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -14,13 +12,9 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from selenium_web_automation_utils.logging_utils import print_error
+from selenium_web_automation_utils.logging_utils import print_error, print_warning, print_custom
 
-_py_ver = tuple(map(int, platform.python_version_tuple()))
-if _py_ver >= (3, 12):
-    # setuptools bundles a vendored distutils in _distutils
-    from setuptools._distutils import version as _dv
-    sys.modules["distutils.version"] = _dv
+from .compatibility import *  # IMPORTANT: Do not remove (supports ver >= 3.12)
 import undetected_chromedriver as uc
 
 # A small pool of common desktop UAs—feel free to expand this list
@@ -44,6 +38,7 @@ def stderr_to_null():
 
 @contextmanager
 def get_webdriver(
+        *,
         implicitly_wait_seconds: int = 5,
         user_agent: Optional[str] = None,
         proxy: Optional[str] = None,
@@ -341,6 +336,59 @@ def move_mouse_randomly(driver):
     except Exception as e:
         print_error(repr(e))
     human_delay()  # Pause after moving the mouse
+
+
+def mimic_human(
+        driver,
+        min_sleep: float = 2.0,
+        max_sleep: float = 5.0,
+        random_scroll: bool = False,
+        random_mouse_move: bool = False,
+        quiet: bool = False,
+) -> None:
+    """
+    Pause and optionally perform simple interactions to mimic a human user.
+
+    Parameters
+    ----------
+    driver
+        The WebDriver instance to use for scrolling / mouse moves.
+    min_sleep
+        Minimum number of seconds to sleep.
+    max_sleep
+        Maximum number of seconds to sleep.
+    random_scroll
+        If True, perform a small random scroll after sleeping.
+    random_mouse_move
+        If True, perform a small random mouse movement after sleeping.
+    quiet
+        If True, suppress the printout of what it’s doing.
+    """
+    # 1. Sleep
+    sleep_secs = random.uniform(min_sleep, max_sleep)
+    if not quiet:
+        actions = [f"sleeping for {sleep_secs:.2f}s"]
+        if random_scroll:
+            actions.append("scroll")
+        if random_mouse_move:
+            actions.append("mouse move")
+        print_custom(f"<- Mimicking human ->: {', '.join(actions)}")
+
+    sleep(sleep_secs)
+
+    # 2. Random scroll
+    if random_scroll:
+        try:
+            scroll_randomly(driver, min_scrolls=1, max_scrolls=3)
+        except Exception as e:
+            print_warning(f"mimic_human scroll failed: {e}")
+
+    # 3. Random mouse move
+    if random_mouse_move:
+        try:
+            move_mouse_randomly(driver)
+        except Exception as e:
+            print_warning(f"mimic_human mouse move failed: {e}")
 
 
 def clean_error_str(e: Exception):
