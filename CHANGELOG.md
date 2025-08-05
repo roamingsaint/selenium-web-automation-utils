@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.4] - 2024-08-06
+## [0.2.5] - 2024-08-06
 ### Added
 - undetected-chromedriver as a dependency
 

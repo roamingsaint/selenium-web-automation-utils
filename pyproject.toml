@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "selenium-web-automation-utils"
-version = "0.2.4"
+version = "0.2.5"
 description = "A lightweight Selenium automation utility package."
 readme = "README.md"
 authors = [
@@ -14,7 +14,7 @@ license = {file = "LICENSE"}
 requires-python = ">=3.7"
 dependencies = [
     "selenium",
-    "undetected-chomedriver"
+    "undetected-chromedriver"
 ]
 
 [project.optional-dependencies]
