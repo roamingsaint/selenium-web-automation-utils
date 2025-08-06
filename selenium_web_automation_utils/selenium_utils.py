@@ -1,9 +1,9 @@
 # selenium_web_automation_utils/selenium_utils.py
 import os
+import time
 import random
 from contextlib import contextmanager, redirect_stderr
 from pathlib import Path
-from time import sleep
 from typing import Optional, List, Iterator
 
 from selenium import webdriver
@@ -301,9 +301,78 @@ def find_element_until_none(driver, xpath, timeout=10):
             return
 
 
+def scroll_and_find_element(driver,
+                            by: str,
+                            locator: str,
+                            timeout: float = 120,
+                            scroll_pause: float = 1.0,
+                            raise_exception: bool = True):
+    """
+    Scrolls down the page one viewport at a time to locate an element.
+
+    This helper will:
+      1. Measure the viewport height once.
+      2. Try to find the element with a quick visibility check each loop.
+      3. If not found, scroll down by one viewport and pause for lazy-loaded content.
+      4. Repeat until the element is visible or the overall timeout elapses.
+      5. If the bottom of the page is reached without finding the element,
+         it will scroll back to the top before exiting.
+
+    Args:
+        driver (WebDriver): The Selenium WebDriver instance.
+        by (str): Locator strategy (e.g. By.ID, By.XPATH).
+        locator (str): The locator expression for the target element.
+        timeout (float): Total seconds to wait before giving up. Defaults to 120.
+        scroll_pause (float): Seconds to sleep after each scroll. Defaults to 1.0.
+        raise_exception (bool): If True, raises TimeoutException when not found;
+                                if False, returns None on timeout.
+
+    Returns:
+        WebElement: The matching element, if found.
+        None: If not found within the timeout and raise_exception is False.
+
+    Raises:
+        TimeoutException: If the element is not found within the timeout
+                          and raise_exception is True.
+    """
+    end_time = time.time() + timeout
+    viewport_height = driver.execute_script("return window.innerHeight")
+    logger.debug("Viewport height = %s", viewport_height)
+    logger.debug("⌛ will wait up to %.1fs for element %s=%s", timeout, by, locator)
+
+    while time.time() < end_time:
+        try:
+            el = WebDriverWait(driver, 1).until(
+                EC.visibility_of_element_located((by, locator))
+            )
+            driver.execute_script("window.scrollTo(0, 0);")
+            logger.debug("✅ Found %s=%s. Scrolled back to top", by, locator)
+            return el
+
+        except TimeoutException:
+            driver.execute_script(f"window.scrollBy(0, {viewport_height});")
+            time.sleep(scroll_pause)
+
+            # check if we've reached (or passed) the bottom
+            current_scroll = driver.execute_script("return window.scrollY")
+            scroll_height = driver.execute_script("return document.body.scrollHeight")
+            if current_scroll + viewport_height >= scroll_height:
+                logger.debug("📄 reached page bottom at scrollY=%s", current_scroll)
+                break
+
+    # not found: reset scroll
+    driver.execute_script("window.scrollTo(0, 0);")
+    logger.debug("🔙 Scrolled back to top after not finding %s=%s", by, locator)
+
+    msg = f"Element not found within {timeout}s: {by}={locator}"
+    if raise_exception:
+        raise TimeoutException(msg)
+    return None
+
+
 # Helper function to add random delays
 def human_delay(min_delay=0.1, max_delay=0.5):
-    sleep(random.uniform(min_delay, max_delay))
+    time.sleep(random.uniform(min_delay, max_delay))
 
 
 def type_keys(web_element: WebElement, message: str, min_delay: int = 50, max_delay: int = 200):
@@ -325,7 +394,7 @@ def type_keys(web_element: WebElement, message: str, min_delay: int = 50, max_de
     for char in message:
         web_element.send_keys(char)
         # Introduce a new random delay between keystrokes
-        sleep(random.randint(min_delay, max_delay) / 1000)
+        time.sleep(random.randint(min_delay, max_delay) / 1000)
 
 
 def scroll_randomly(driver, min_scrolls=1, max_scrolls=5):
@@ -361,7 +430,7 @@ def move_mouse_randomly(driver: WebDriver) -> None:
             .perform()
 
         # small pause after moving
-        sleep(random.uniform(0.1, 0.5))
+        time.sleep(random.uniform(0.1, 0.5))
 
     except Exception as e:
         # transient failure is fine—log and continue
@@ -403,7 +472,7 @@ def mimic_human(
             actions.append("mouse move")
         logger.info("Mimic human: %s", ", ".join(actions))
 
-    sleep(sleep_secs)
+    time.sleep(sleep_secs)
 
     if random_scroll:
         try:
