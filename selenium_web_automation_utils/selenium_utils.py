@@ -43,10 +43,6 @@ def stderr_to_null():
             yield
 
 
-def clean_error_str(e: Exception):
-    return str(e).split('Stacktrace')[0].strip()
-
-
 @contextmanager
 def get_webdriver(
         *,
@@ -301,7 +297,7 @@ def find_element_until_none(driver, xpath, timeout=10):
         try:
             yield find_element_wait(driver, By.XPATH, xpath, timeout=timeout, raise_exception=True)
         except Exception as e:
-            logger.warning("No longer able to find element with xpath %r: %s", xpath, clean_error_str(e))
+            logger.warning("No longer able to find element with xpath %r: %s", xpath, e)
             return
 
 
@@ -364,7 +360,7 @@ def move_mouse_randomly(driver):
     try:
         ActionChains(driver).move_by_offset(new_x - current_x, new_y - current_y).perform()
     except Exception as e:
-        logger.error("move_mouse_randomly failed: %s", clean_error_str(e))
+        logger.error("move_mouse_randomly failed: %s", e)
     human_delay()  # Pause after moving the mouse
 
 
@@ -409,10 +405,10 @@ def mimic_human(
         try:
             scroll_randomly(driver, min_scrolls=1, max_scrolls=3)
         except Exception as e:
-            logger.warning("mimic_human scroll failed: %s", clean_error_str(e))
+            logger.warning("mimic_human scroll failed: %s", e)
 
     if random_mouse_move:
         try:
             move_mouse_randomly(driver)
         except Exception as e:
-            logger.warning("mimic_human mouse move failed: %s", clean_error_str(e))
+            logger.warning("mimic_human mouse move failed: %s", e)

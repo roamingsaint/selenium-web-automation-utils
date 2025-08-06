@@ -6,6 +6,10 @@ from datetime import datetime
 from selenium_web_automation_utils.logging_utils import logger
 
 
+def clean_error_partition(e: Exception) -> str:
+    return str(e).partition("Stacktrace")[0].strip()
+
+
 class LoggingListener(AbstractEventListener):
 
     def before_navigate_to(self, url: str, driver: WebDriver):
@@ -56,7 +60,7 @@ class LoggingListener(AbstractEventListener):
         logger.error(
             "‼ WebDriver exception at %s: %s",
             current,
-            exception
+            clean_error_partition(exception)
         )
         # # Walk the traceback to see if move_mouse_randomly is in the call stack
         # tb = exception.__traceback__
