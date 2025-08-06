@@ -4,6 +4,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from datetime import datetime
 from selenium_web_automation_utils.logging_utils import logger
+from selenium.common.exceptions import WebDriverException
 
 
 def clean_error_partition(e: Exception) -> str:
@@ -53,31 +54,26 @@ class LoggingListener(AbstractEventListener):
         logger.info("← after_alert_accept")
 
     def on_exception(self, exception, driver: WebDriver):
+        """
+        Log real WebDriver exceptions, but ignore benign AttributeErrors
+        about 'shape' or '__len__' being missing.
+        """
+        msg = clean_error_partition(exception)
+
+        # Ignore these benign attribute‐lookup errors
+        if isinstance(exception, AttributeError) and (
+                "object has no attribute 'shape'" in msg or
+                "object has no attribute '__len__'" in msg
+        ):
+            return
+
         try:
             current = driver.current_url
-        except Exception:
+        except WebDriverException:
             current = "<couldn't fetch URL>"
+
         logger.error(
             "‼ WebDriver exception: %s at %s",
-            clean_error_partition(exception),
+            msg,
             current
         )
-        # # Walk the traceback to see if move_mouse_randomly is in the call stack
-        # tb = exception.__traceback__
-        # while tb:
-        #     if tb.tb_frame.f_code.co_name in ["move_mouse_randomly"]:
-        #         # Skip screenshot for mouse-move hiccups
-        #         logger.warning("⚠ Skipping screenshot for move_mouse_randomly exception: %s", exception)
-        #         return
-        #     tb = tb.tb_next
-        #
-        # # Otherwise take a timestamped screenshot
-        # ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-        # filename = f"screenshot-{ts}.png"
-        # try:
-        #     driver.save_screenshot(filename)
-        #     logger.info("✔ saved screenshot %s", filename)
-        # except Exception as e:
-        #     logger.error("✖ failed to save screenshot: %s", e)
-        #
-        # logger.error("‼ WebDriver exception: %s", exception)
