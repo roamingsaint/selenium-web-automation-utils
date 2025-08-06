@@ -22,7 +22,7 @@ from selenium_web_automation_utils.logging_utils import logger
 from .compatibility import *
 import undetected_chromedriver as uc
 
-from .logging_listener import LoggingListener
+from .logging_listener import LoggingListener, clean_error_partition
 
 # A small pool of common desktop UAs—feel free to expand this list
 USER_AGENT_LIST = [
@@ -335,33 +335,37 @@ def scroll_randomly(driver, min_scrolls=1, max_scrolls=5):
         human_delay(1, 3)  # Random delay between scrolls
 
 
-def move_mouse_randomly(driver):
-    """Simulate random mouse movements to mimic human behavior."""
-    width = driver.execute_script("return window.innerWidth")
-    height = driver.execute_script("return window.innerHeight")
+def move_mouse_randomly(driver: WebDriver) -> None:
+    """
+    Simulate random mouse movements to mimic human behavior.
 
-    # Get current mouse position
-    current_x = driver.execute_script("return window.scrollX")
-    current_y = driver.execute_script("return window.scrollY")
-
-    # Generate random offsets within the bounds of the viewport
-    x_offset = random.randint(-int(width / 4), int(width / 4))
-    y_offset = random.randint(-int(height / 4), int(height / 4))
-
-    # Calculate new mouse position
-    new_x = current_x + x_offset
-    new_y = current_y + y_offset
-
-    # Ensure the new position is within the bounds of the viewport
-    new_x = max(0, min(new_x, width - 1))
-    new_y = max(0, min(new_y, height - 1))
-
-    # Move the mouse to the calculated position
+    Chooses a random point within the viewport (using window.innerWidth/innerHeight)
+    and moves the mouse there relative to the <body> element to avoid out-of-bounds.
+    Swallows any errors to prevent noisy tracebacks.
+    """
     try:
-        ActionChains(driver).move_by_offset(new_x - current_x, new_y - current_y).perform()
+        # get viewport dimensions
+        width = driver.execute_script("return window.innerWidth")
+        height = driver.execute_script("return window.innerHeight")
+
+        # pick a random target within the viewport
+        target_x = random.randint(0, width - 1)
+        target_y = random.randint(0, height - 1)
+
+        # find the <body> element as a stable reference
+        body = driver.find_element(By.TAG_NAME, "body")
+
+        # perform the move relative to <body>
+        ActionChains(driver) \
+            .move_to_element_with_offset(body, target_x, target_y) \
+            .perform()
+
+        # small pause after moving
+        sleep(random.uniform(0.1, 0.5))
+
     except Exception as e:
-        logger.error("move_mouse_randomly failed: %s", e)
-    human_delay()  # Pause after moving the mouse
+        # transient failure is fine—log and continue
+        logger.warning("⚠ move_mouse_randomly transient failure: %s", clean_error_partition(e))
 
 
 def mimic_human(

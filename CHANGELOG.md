@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.6] - 2024-08-06
+## [0.3.7] - 2024-08-06
 ### Added
 - mimic_human()
 - undetected-chromedriver as a dependency
