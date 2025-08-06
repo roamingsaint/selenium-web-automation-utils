@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.9] - 2024-08-07
+### Added
+- scroll_and_find_element()
+
 ## [0.3.8] - 2024-08-06
 ### Added
 - mimic_human()
