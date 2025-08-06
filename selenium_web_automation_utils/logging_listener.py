@@ -58,9 +58,9 @@ class LoggingListener(AbstractEventListener):
         except Exception:
             current = "<couldn't fetch URL>"
         logger.error(
-            "‼ WebDriver exception at %s: %s",
-            current,
-            clean_error_partition(exception)
+            "‼ WebDriver exception: %s at %s",
+            clean_error_partition(exception),
+            current
         )
         # # Walk the traceback to see if move_mouse_randomly is in the call stack
         # tb = exception.__traceback__
