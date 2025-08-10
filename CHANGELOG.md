@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.10] - 2024-08-10
+## [0.3.11] - 2024-08-10
 ### Added
 - logging: ignore benign attribute-lookup noise
 

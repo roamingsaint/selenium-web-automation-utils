@@ -1,14 +1,33 @@
 # selenium_web_automation_utils/logging_listener.py
+import re
+
 from selenium.webdriver.support.events import AbstractEventListener
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from datetime import datetime
 from selenium_web_automation_utils.logging_utils import logger
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import (
+    WebDriverException,
+    NoSuchElementException,
+    StaleElementReferenceException,
+    TimeoutException
+)
 
 
 def clean_error_partition(e: Exception) -> str:
-    return str(e).partition("Stacktrace")[0].strip()
+    """
+    Return a concise, user-friendly Selenium error message.
+    - Prefer e.msg if present (WebDriverException subclasses).
+    - Strip 'Stacktrace', 'For documentation...', and '(Session info: ...)' tails.
+    """
+    raw = getattr(e, "msg", str(e))
+    msg = raw.split("Stacktrace", 1)[0]
+
+    # Remove "For documentation..." trailers and "(Session info: ...)" tails (case-insensitive)
+    msg = re.sub(r"\s*For documentation.*?$", "", msg, flags=re.I | re.S)
+    msg = re.sub(r"\s*\(Session info:.*?$", "", msg, flags=re.I | re.S)
+
+    return msg.strip()
 
 
 class LoggingListener(AbstractEventListener):
@@ -60,20 +79,22 @@ class LoggingListener(AbstractEventListener):
         msg = clean_error_partition(exception)
         low = msg.lower()
 
-        # Ignore common benign messages, even when wrapped
-        benign_needles = (
-            "object has no attribute 'shape'",
-            'object has no attribute "shape"',
-            "object has no attribute '__len__'",
-            'object has no attribute "__len__"',
-        )
-        if any(n in low for n in benign_needles):
+        # Ignore benign attribute-lookup noise, regardless of exception type
+        if ("attribute 'shape'" in low) or ("attribute '__len__'" in low):
             logger.debug("↩︎ Ignoring benign attribute-lookup error: %s", msg)
             return
+
+        # Downgrade common, expected Selenium exceptions to WARNING
+        expected_types = (NoSuchElementException, StaleElementReferenceException, TimeoutException)
+        expected_needles = ("no such element", "stale element reference", "timeout")
+        is_expected = isinstance(exception, expected_types) or any(n in low for n in expected_needles)
 
         try:
             current = driver.current_url
         except WebDriverException:
             current = "<couldn't fetch URL>"
 
-        logger.error("‼ WebDriver exception: %s at %s", msg, current)
+        if is_expected:
+            logger.warning("⚠ WebDriver expected exception: `%s` at `%s`", msg, current)
+        else:
+            logger.error("‼ WebDriver exception: `%s` at `%s`", msg, current)
