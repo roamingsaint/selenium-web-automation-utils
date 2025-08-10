@@ -55,16 +55,20 @@ class LoggingListener(AbstractEventListener):
 
     def on_exception(self, exception, driver: WebDriver):
         """
-        Log real WebDriver exceptions, but ignore benign AttributeErrors
-        about 'shape' or '__len__' being missing.
+        Log real WebDriver exceptions, but ignore benign attribute-lookup noise
         """
         msg = clean_error_partition(exception)
+        low = msg.lower()
 
-        # Ignore these benign attribute‐lookup errors
-        if isinstance(exception, AttributeError) and (
-                "object has no attribute 'shape'" in msg or
-                "object has no attribute '__len__'" in msg
-        ):
+        # Ignore common benign messages, even when wrapped
+        benign_needles = (
+            "object has no attribute 'shape'",
+            'object has no attribute "shape"',
+            "object has no attribute '__len__'",
+            'object has no attribute "__len__"',
+        )
+        if any(n in low for n in benign_needles):
+            logger.debug("↩︎ Ignoring benign attribute-lookup error: %s", msg)
             return
 
         try:
@@ -72,8 +76,4 @@ class LoggingListener(AbstractEventListener):
         except WebDriverException:
             current = "<couldn't fetch URL>"
 
-        logger.error(
-            "‼ WebDriver exception: %s at %s",
-            msg,
-            current
-        )
+        logger.error("‼ WebDriver exception: %s at %s", msg, current)

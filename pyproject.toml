@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "selenium-web-automation-utils"
-version = "0.3.9"
+version = "0.3.10"
 description = "A lightweight Selenium automation utility package."
 readme = "README.md"
 authors = [

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.10] - 2024-08-10
+### Added
+- logging: ignore benign attribute-lookup noise
+
 ## [0.3.9] - 2024-08-07
 ### Added
 - scroll_and_find_element()
