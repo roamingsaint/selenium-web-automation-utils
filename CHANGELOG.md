@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.3.11] - 2024-08-10
+## [0.3.12] - 2024-08-10
 ### Added
+- scroll_to_top(): helper to scroll to top of page
 - logging: ignore benign attribute-lookup noise
 
 ## [0.3.9] - 2024-08-07

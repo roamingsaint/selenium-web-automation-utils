@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Optional, List, Iterator
 
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver import ActionChains
+from selenium.common.exceptions import TimeoutException, JavascriptException, WebDriverException
+from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
@@ -395,6 +395,38 @@ def type_keys(web_element: WebElement, message: str, min_delay: int = 50, max_de
         web_element.send_keys(char)
         # Introduce a new random delay between keystrokes
         time.sleep(random.randint(min_delay, max_delay) / 1000)
+
+
+def scroll_to_top(driver) -> bool:
+    ok = False
+
+    # JS first
+    try:
+        driver.execute_script("""
+            (document.scrollingElement || document.documentElement || document.body)
+              .scrollTo({top: 0, left: 0, behavior: 'instant'});
+        """)
+        ok = True
+    except (JavascriptException, WebDriverException) as e:
+        logger.debug("scroll_to_top_of_page: JS failed: %s", clean_error_partition(e))
+
+    # HOME fallback
+    try:
+        ActionChains(driver).send_keys(Keys.HOME).perform()
+        ok = True
+    except WebDriverException as e:
+        logger.debug("scroll_to_top_of_page: Keys.HOME failed: %s", clean_error_partition(e))
+        # Focus <body> and retry
+        try:
+            driver.find_element(By.TAG_NAME, "body").click()
+            ActionChains(driver).send_keys(Keys.HOME).perform()
+            ok = True
+        except WebDriverException as e2:
+            logger.debug("scroll_to_top_of_page: focus+HOME failed: %s", clean_error_partition(e2))
+
+    if ok:
+        logger.info("Scrolled to top of the page.")
+    return ok
 
 
 def scroll_randomly(driver, min_scrolls=1, max_scrolls=5):
